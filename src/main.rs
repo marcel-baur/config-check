@@ -24,16 +24,27 @@ fn get_config() -> Option<Configuration> {
     }
 }
 fn main() {
-    println!("Hello, world!");
     let configuration = get_config().unwrap();    
-    let mut key_map = HashMap::new();
-    for file in configuration.files {
+    let mut key_map = HashMap::<String, Vec<String>>::new();
+    // let mut key_vec = Vec::new();
+    for file in &configuration.files {
         let result: Vec<Entry> = match fetch_file(&file) {
             Ok(r) => r,
             Err(_) => panic!("Error when parsing file {file}"),
         };
         let keys: Vec<Key> = result.into_iter().map(|r| r.0).collect();
-        key_map.insert(file, keys);
+        // key_map.insert(file.clone(), keys.clone());
+        // key_vec.push((keys, file));
+        for key in keys {
+            match key_map.get_mut(&key.join(".")) {
+                Some(res) => res.push(file.clone()),
+                None => {key_map.insert(key.join(".").clone(), vec![file.clone()]);},
+            }
+        }
+
     }
-    // TODO: compare entries in map, print differences
+    let outliers: Vec<(String, Vec<String>)> = key_map.into_iter()
+        .filter(|e| e.1.len() < configuration.files.len())
+        .collect();
+    println!("The following properties only appear in the listed files: {:?}", outliers);
 }
